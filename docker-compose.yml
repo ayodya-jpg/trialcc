@@ -1,38 +1,57 @@
-version: '3.8'
-
 services:
-  # PHP-FPM Service (Our Laravel App)
   app:
     build:
       context: .
-      dockerfile: tubesflixplay
-      target: development # Use the 'development' stage from our Dockerfile
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    ports:
+      - "8003:8000"
     volumes:
-      - ./src:/var/www/html # Mount our local 'src' directory into the container
-    networks:
-      - laravel-net
+      - ./:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
 
-  # MySQL Service (Database)
   db:
     image: mysql:8.0
-    ports:
-      - "3308:3306" # Map host port 33066 to container port 3306 (to avoid local conflicts)
+    container_name: mysql_db
+    restart: always
     environment:
-      MYSQL_DATABASE: flixplaycc
-      MYSQL_USER: user
-      MYSQL_PASSWORD: root
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: flixplay
+    ports:
+      - "3309:3306"
+    command: --default-authentication-plugin=mysql_native_password
     volumes:
-      - db-data:/var/lib/mysql # Persist database data
-    networks:
-      - laravel-net
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-# Define our custom network
-networks:
-  laravel-net:
-    driver: bridge
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    restart: always
+    ports:
+      - "8084:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: root
+    depends_on:
+      - db
 
-# Define our persistent volume
+  redis:
+    image: redis:7
+    container_name: redis_server
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
 volumes:
-  db-data:
-    driver: local
+  mysql_data:

@@ -9,21 +9,27 @@ use Illuminate\Support\Facades\Hash;
 class UserSeeder extends Seeder
 {
     public function run(): void
-{
-    User::create([
-        'name' => 'Admin FlixPlay',
-        'email' => 'admin@flixplay.com',
-        'password' => Hash::make('admin123'),
-        'is_admin' => true,  // ← TAMBAH INI
-    ]);
+    {
+        User::firstOrCreate(
+            ['email' => 'admin@flixplay.com'],
+            [
+                'name' => 'Admin FlixPlay',
+                'username' => 'admin',
+                'password' => Hash::make('admin123'),
+                'is_admin' => true,
+            ]
+        );
 
-    User::create([
-        'name' => 'User Test',
-        'email' => 'user@flixplay.com',
-        'password' => Hash::make('user123'),
-        'is_admin' => false,
-    ]);
+        User::firstOrCreate(
+            ['email' => 'user@flixplay.com'],
+            [
+                'name' => 'User Test',
+                'username' => 'user',
+                'password' => Hash::make('user123'),
+                'is_admin' => false,
+            ]
+        );
 
-    User::factory(10)->create();
-}
+        User::factory(10)->create();
+    }
 }
