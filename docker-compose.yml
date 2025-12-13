@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # PHP-FPM Service (Our Laravel App)
+  app:
+    build:
+      context: .
+      dockerfile: tubesflixplay
+      target: development # Use the 'development' stage from our Dockerfile
+    volumes:
+      - ./src:/var/www/html # Mount our local 'src' directory into the container
+    networks:
+      - laravel-net
+
+  # MySQL Service (Database)
+  db:
+    image: mysql:8.0
+    ports:
+      - "3308:3306" # Map host port 33066 to container port 3306 (to avoid local conflicts)
+    environment:
+      MYSQL_DATABASE: flixplaycc
+      MYSQL_USER: user
+      MYSQL_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - db-data:/var/lib/mysql # Persist database data
+    networks:
+      - laravel-net
+
+# Define our custom network
+networks:
+  laravel-net:
+    driver: bridge
+
+# Define our persistent volume
+volumes:
+  db-data:
+    driver: local
