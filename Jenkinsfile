@@ -1,27 +1,52 @@
 pipeline {
     agent any
 
+    environment {
+        APP_NAME = "flixplay-app"
+        ZIP_NAME = "deploy.zip"
+    }
+
     stages {
-        stage('Build Docker Image') {
+
+        stage('Checkout') {
             steps {
-                bat 'docker build -t flixplay-app .'
+                checkout scm
             }
         }
 
-        stage('Test') {
-            steps {
-                bat 'docker run --rm flixplay-app php artisan --version'
-            }
-        }
-
-        stage('Deploy to Azure') {
+        stage('Prepare App') {
             steps {
                 bat '''
-                az webapp restart \
-                  --name flixplay-app \
-                  --resource-group rg-flixplay
+                rm -rf vendor node_modules
+                zip -r $ZIP_NAME . -x "*.git*" "node_modules/*"
                 '''
             }
+        }
+
+        stage('Deploy to Azure (Zip Deploy)') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'azure-zip-deploy',
+                    usernameVariable: 'AZ_USER',
+                    passwordVariable: 'AZ_PASS'
+                )]) {
+                    bat '''
+                    curl -X POST \
+                      -u $AZ_USER:$AZ_PASS \
+                      https://flixplay-app.scm.azurewebsites.net/api/zipdeploy \
+                      --data-binary @$ZIP_NAME
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment sukses ke Azure App Service"
+        }
+        failure {
+            echo "❌ Deployment gagal"
         }
     }
 }
